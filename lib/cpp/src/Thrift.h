@@ -39,6 +39,9 @@ class TOutput {
   }
 
   void perror(const char *message, int errno_copy);
+  inline void perror(const std::string &message, int errno_copy) {
+    perror(message.c_str(), errno_copy);
+  }
 
   inline static void errorTimeWrapper(const char* msg) {
     time_t now;
