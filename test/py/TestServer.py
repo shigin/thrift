@@ -90,8 +90,8 @@ tfactory = TTransport.TBufferedTransportFactory()
 pfactory = TBinaryProtocol.TBinaryProtocolFactory()
 
 if sys.argv[1] == "TNonblockingServer":
-  server = TNonblockingServer.TNonblockingServer(processor, transport)
+  server = TNonblockingServer.TNonblockingServer(mux, transport)
 else:
   ServerClass = getattr(TServer, sys.argv[1])
-  server = ServerClass(processor, transport, tfactory, pfactory)
+  server = ServerClass(mux, transport, tfactory, pfactory)
 server.serve()
