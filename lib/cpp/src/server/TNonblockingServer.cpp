@@ -194,7 +194,7 @@ void TConnection::workSocket() {
     return;
 
   default:
-    fprintf(stderr, "Shit Got Ill. Socket State %d\n", socketState_);
+    GlobalOutput.printf("Shit Got Ill. Socket State %d", socketState_);
     assert(0);
   }
 }
@@ -265,15 +265,15 @@ void TConnection::transition() {
         // Invoke the processor
         server_->getProcessor()->process(inputProtocol_, outputProtocol_);
       } catch (TTransportException &ttx) {
-        fprintf(stderr, "TTransportException: Server::process() %s\n", ttx.what());
+        GlobalOutput.printf("TTransportException: Server::process() %s", ttx.what());
         close();
         return;
       } catch (TException &x) {
-        fprintf(stderr, "TException: Server::process() %s\n", x.what());
+        GlobalOutput.printf("TException: Server::process() %s", x.what());
         close();
         return;
       } catch (...) {
-        fprintf(stderr, "Server::process() unknown exception\n");
+        GlobalOutput.printf("Server::process() unknown exception");
         close();
         return;
       }
@@ -351,7 +351,7 @@ void TConnection::transition() {
     sz = (int32_t)ntohl(sz);
 
     if (sz <= 0) {
-      fprintf(stderr, "TConnection:transition() Negative frame size %d, remote side not using TFramedTransport?\n", sz);
+      GlobalOutput.printf("TConnection:transition() Negative frame size %d, remote side not using TFramedTransport?", sz);
       close();
       return;
     }
@@ -369,7 +369,7 @@ void TConnection::transition() {
     return;
 
   default:
-    fprintf(stderr, "Totally Fucked. Application State %d\n", appState_);
+    GlobalOutput.printf("Totally Fucked. Application State %d", appState_);
     assert(0);
   }
 }
@@ -514,7 +514,7 @@ void TNonblockingServer::handleEvent(int fd, short which) {
 
     // Fail fast if we could not create a TConnection object
     if (clientConnection == NULL) {
-      fprintf(stderr, "thriftServerEventHandler: failed TConnection factory\n");
+      GlobalOutput.printf("thriftServerEventHandler: failed TConnection factory");
       close(clientSocket);
       return;
     }
@@ -639,8 +639,7 @@ void TNonblockingServer::registerEvents(event_base* base) {
   eventBase_ = base;
 
   // Print some libevent stats
-  fprintf(stderr,
-          "libevent %s method %s\n",
+  GlobalOutput.printf("libevent %s method %s",
           event_get_version(),
           event_get_method());
 
