@@ -43,7 +43,7 @@ class AbstractTest(unittest.TestCase):
 
     self.transport.open()
 
-    protocol = self.protocol_factory.getProtocol(self.transport)
+    protocol = self.protocol_factory.getProtocol(self.transport, 'test')
     self.client = ThriftTest.Client(protocol)
 
   def tearDown(self):
