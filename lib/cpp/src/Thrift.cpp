@@ -13,6 +13,11 @@ namespace facebook { namespace thrift {
 
 TOutput GlobalOutput;
 
+void TOutput::perror(const char *message, int errno_copy) {
+  std::string out = message + strerror_s(errno_copy);
+  f_(out.c_str());
+}
+
 std::string TOutput::strerror_s(int errno_copy) {
 #ifndef HAVE_STRERROR_R
   return "errno = " + boost::lexical_cast<string>(errno_copy);
