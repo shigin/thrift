@@ -25,12 +25,15 @@ class TBinaryProtocol(TProtocolBase):
 
   TYPE_MASK = 0x000000ff
 
-  def __init__(self, trans, strictRead=False, strictWrite=True):
+  def __init__(self, trans, strictRead=False, strictWrite=True, mux=None):
     TProtocolBase.__init__(self, trans)
     self.strictRead = strictRead
     self.strictWrite = strictWrite
+    self.mux = mux
 
   def writeMessageBegin(self, name, type, seqid):
+    if self.mux:
+        name = '.'.join([self.mux, name])
     if self.strictWrite:
       self.writeI32(TBinaryProtocol.VERSION_1 | type)
       self.writeString(name)
@@ -214,9 +217,8 @@ class TBinaryProtocolFactory:
     self.strictRead = strictRead
     self.strictWrite = strictWrite
 
-  def getProtocol(self, trans):
-    prot = TBinaryProtocol(trans, self.strictRead, self.strictWrite)
-    return prot
+  def getProtocol(self, trans, name=None):
+    return TBinaryProtocol(trans, self.strictRead, self.strictWrite, name)
 
 
 class TBinaryProtocolAccelerated(TBinaryProtocol):
@@ -244,5 +246,5 @@ class TBinaryProtocolAccelerated(TBinaryProtocol):
 
 
 class TBinaryProtocolAcceleratedFactory:
-  def getProtocol(self, trans):
-    return TBinaryProtocolAccelerated(trans)
+  def getProtocol(self, trans, name=None):
+    return TBinaryProtocolAccelerated(trans, name)
