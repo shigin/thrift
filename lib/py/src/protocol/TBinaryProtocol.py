@@ -247,4 +247,4 @@ class TBinaryProtocolAccelerated(TBinaryProtocol):
 
 class TBinaryProtocolAcceleratedFactory:
   def getProtocol(self, trans, name=None):
-    return TBinaryProtocolAccelerated(trans, name)
+    return TBinaryProtocolAccelerated(trans, mux=name)
