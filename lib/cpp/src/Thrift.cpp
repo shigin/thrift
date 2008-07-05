@@ -8,10 +8,31 @@
 #include <cstring>
 #include <boost/lexical_cast.hpp>
 #include <protocol/TProtocol.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 namespace facebook { namespace thrift {
 
 TOutput GlobalOutput;
+
+void TOutput::printf(const char *message, ...) {
+  char buff[200];
+  /* i try to reduce heap usage, even if printf is called rare */
+  va_list ap;
+  va_start(ap, message);
+  int need = vsnprintf(buff, 200, message, ap);
+  va_end(ap);
+  if (need >= 200) {
+    char *abuf = (char*)malloc(need * sizeof(char));
+    int rval = vsnprintf(buff, 200, message, ap);
+    /* TODO(shigin): inform user*/
+    if (rval != -1)
+      f_(buff);
+    free(abuf);
+  } else {
+    f_(buff);
+  }
+}
 
 void TOutput::perror(const char *message, int errno_copy) {
   std::string out = message + strerror_s(errno_copy);

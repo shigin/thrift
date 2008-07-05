@@ -43,6 +43,8 @@ class TOutput {
     perror(message.c_str(), errno_copy);
   }
 
+  void printf(const char *message, ...);
+
   inline static void errorTimeWrapper(const char* msg) {
     time_t now;
     char dbgtime[25];
