@@ -100,7 +100,7 @@ void TServerSocket::listen() {
   // Wildcard address
   error = getaddrinfo(NULL, port, &hints, &res0);
   if (error) {
-    fprintf(stderr, "getaddrinfo %d: %s\n", error, gai_strerror(error));
+    GlobalOutput.printf("getaddrinfo %d: %s", error, gai_strerror(error));
     close();
     throw TTransportException(TTransportException::NOT_OPEN, "Could not resolve host for server socket.");
   }

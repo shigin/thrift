@@ -100,7 +100,7 @@ void TFileTransport::resetOutputFile(int fd, string filename, int64_t offset) {
   if (fd_ > 0) {
     // flush any events in the queue
     flush();
-    fprintf(stderr, "error, current file (%s) not closed\n", filename_.c_str());
+    GlobalOutput.printf("error, current file (%s) not closed", filename_.c_str());
     if (-1 == ::close(fd_)) {
       int errno_copy = errno;
       GlobalOutput.perror("TFileTransport: resetOutputFile() ::close() ", errno_copy);
