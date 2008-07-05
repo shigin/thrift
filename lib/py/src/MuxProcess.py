@@ -1,12 +1,28 @@
+import time
 from thrift.Thrift import *
 
 class TMuxProcessor(TProcessor):
-    def __init__(self, processors, default=None):
+    def __init__(self, processors=None, default=None):
         """Processor is a dict {'name': processor}"""
-        self.__map = processors
+        self.__map = processors or {}
         self.__default = default
+        self._queries = 0
+        self._time = 0.0
+        self._errors = 0
+        self._processMap = dict(queries=1,
+                                time=2,
+                                errors=3)
+
+    def register_processor(self, name, processor, default=False):
+        self.__map[name] = processor
+        if default:
+            self.__default = processor
+
+    def register_stat(self):
+        self.__map['_stat'] = self
 
     def __raise_unknown(self, name, seqid, iprot, oprot):
+        self._errors += 1
         iprot.skip(TType.STRUCT)
         iprot.readMessageEnd()
         x = TApplicationException(
@@ -18,7 +34,6 @@ class TMuxProcessor(TProcessor):
 
     def process(self, iprot, oprot):
         name, type, seqid = iprot.readMessageBegin()
-        print name
         if '.' in name:
             obj_name, name = name.split('.', 1)
             if obj_name in self.__map:
@@ -35,5 +50,9 @@ class TMuxProcessor(TProcessor):
         if name not in obj._processMap:
             self.__raise_unknown(name, seqid, iprot, oprot)
         else:
+            start = time.time()
+            self._queries += 1
             obj._processMap[name](obj, seqid, iprot, oprot)
+            self._time += time.time() - start
             return True
+
