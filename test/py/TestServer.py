@@ -4,15 +4,19 @@ import sys, glob, time
 sys.path.insert(0, './gen-py')
 sys.path.insert(0, glob.glob('../../lib/py/build/lib.*')[0])
 
-from ThriftTest import ThriftTest
+from ThriftTest import ThriftTest, SecondService
 from ThriftTest.ttypes import *
 from thrift.transport import TTransport
 from thrift.transport import TSocket
 from thrift.protocol import TBinaryProtocol
 from thrift.server import TServer, TNonblockingServer
+from thrift import MuxProcess
+
+class SecondHandler:
+  def blahBlah(self):
+    print "blahBlah()"
 
 class TestHandler:
-
   def testVoid(self):
     print 'testVoid()'
 
@@ -77,8 +81,10 @@ class TestHandler:
   def testTypedef(self, thing):
     return thing
 
-handler = TestHandler()
-processor = ThriftTest.Processor(handler)
+processor = ThriftTest.Processor(TestHandler())
+second = SecondService.Processor(SecondHandler())
+mux = MuxProcess.TMuxProcessor({'test': processor,
+                                'second': second})
 transport = TSocket.TServerSocket(9090)
 tfactory = TTransport.TBufferedTransportFactory()
 pfactory = TBinaryProtocol.TBinaryProtocolFactory()
