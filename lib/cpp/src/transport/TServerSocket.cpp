@@ -273,7 +273,7 @@ shared_ptr<TTransport> TServerSocket::acceptImpl() {
       if (intSock2_ >= 0 && (fds[1].revents & POLLIN)) {
         int8_t buf;
         if (-1 == recv(intSock2_, &buf, sizeof(int8_t), 0)) {
-          GlobalOutput.perror("TServerSocket::acceptImpl() recv() interrupt ", errno_copy);
+          GlobalOutput.perror("TServerSocket::acceptImpl() recv() interrupt ", errno);
         }
         throw TTransportException(TTransportException::INTERRUPTED);
       }
