@@ -45,9 +45,8 @@ def reader_helper(iprot, ftype):
     return iprot.readDouble()
   elif ftype == TType.STRING:
     return iprot.readString()
-  elif ftype == TType.STRUCT:
-    raise "XXX"
   elif ftype == TType.MAP:
+    # XXX TODO: support complex types
     ktype, vtype, size = iprot.readMapBegin()
     result = {}
     for i in range(size):
@@ -60,7 +59,7 @@ def reader_helper(iprot, ftype):
     etype, size = iprot.readSetBegin()
     result = set()
     for i in xrange(size):
-      result.append(reader_helper(iprot, etype))
+      result.update([reader_helper(iprot, etype)])
     iprot.readSetEnd()
     return result
   elif ftype == TType.LIST:
@@ -72,6 +71,30 @@ def reader_helper(iprot, ftype):
     return result
   raise "XXX"
 
+def write_adv_helper(oprot, ftype, type_args, value):
+  if ftype == TType.MAP:
+    # XXX TODO handle complex type
+    ktype, _, vtype, _ = type_args
+    oprot.writeMapBegin(ktype, vtype, len(value))
+    for k, v in value.items():
+      write_helper(oprot, ktype, k)
+      write_helper(oprot, vtype, v)
+    oprot.writeMapEnd()
+  elif ftype in (TType.LIST, TType.SET):
+    if ftype == TType.LIST:
+      begin = oprot.writeListBegin
+      end = oprot.writeListEnd
+    else:
+      begin = oprot.writeSetBegin
+      end = oprot.writeSetEnd
+    xtype, _ = type_args
+    begin(xtype, len(value))
+    for k in value:
+      write_helper(oprot, xtype, k)
+    end()
+  else:
+    raise "XXX"
+    
 # new style class has __name__ property
 class ThriftStruct(object):
   """Parent of all structure.
@@ -135,8 +158,10 @@ class ThriftStruct(object):
       value = getattr(self, fname, default)
       if value is not None: # it's bad idea to skip [] as None
         oprot.writeFieldBegin(fname, ftype, fid)
-        if ftype in (TType.STRUCT, TType.SET, TType.MAP, TType.LIST):
-          raise "XXX"
+        if ftype in (TType.SET, TType.MAP, TType.LIST):
+          write_adv_helper(oprot, ftype, type_args, value)
+        elif ftype == TType.STRUCT:
+          value.write(oprot)
         else:
           write_helper(oprot, ftype, value)
         oprot.writeFieldEnd()
