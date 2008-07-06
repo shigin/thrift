@@ -60,17 +60,17 @@ class ThriftStruct(object):
    (num, type, typeargs, default)
   """
   def __init__(self, vars=None):
-    print "init it..."
     assert self.thrift_spec
     # it may be bad
-    assert isinstance(vars, (dict, type(None)))
-    self.vars = vars or {}
+    if vars:
+      assert isinstance(vars, dict)
+      for name, value in vars.items():
+        setattr(self, name, value)
     # TODO: guard it with mutex
     class_ = type(self)
     if hasattr(class_, 'cached'):
       return
     class_.cached = {}
-    print self.cached
     for x in self.thrift_spec:
       if x:
         class_.cached[x[0]] = x[1:]
@@ -79,7 +79,6 @@ class ThriftStruct(object):
     if fastbinary and isinstance(iprot, TBinaryProtocol.TBinaryProtocolAccelerated):
       fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
       return
-    print "normal operation"
 
     iprot.readStructBegin()
     while True:
@@ -89,12 +88,13 @@ class ThriftStruct(object):
       else:
         stype, sname, type_args, default = self.cached[fid]
         if stype == ftype:
-          if stype:
+          if type_args:
             class_, spec = type_args
-            self.vars[sname] = class_()
-            self.vars[sname].read()
+            result = class_()
+            result.read()
+            setattr(self, sname, result)
           else:
-            self.vars[sname] = reader_helper(iprot, stype)
+            setattr(self, sname, reader_helper(iprot, stype))
         else:
           iprot.skip(ftype)
     iprot.readFieldEnd()
