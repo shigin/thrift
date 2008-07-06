@@ -70,7 +70,8 @@ class ThriftStruct(object):
       return
     class_.cached = {}
     for x in self.thrift_spec:
-      class_.cached[x[0]] = x[1:]
+      if x:
+        class_.cached[x[0]] = x[1:]
 
   def write(self, iprot):
     if fastbinary and isinstance(oprot, TBinaryProtocol.TBinaryProtocolAccelerated):
@@ -78,24 +79,24 @@ class ThriftStruct(object):
       oprot.trans.write(fastbinary.encode_binary(self, spec))
       return
 
-   iprot.readStructBegin()
-   while True:
-    fname, ftype, fid = iprot.readFieldBegin()
-    if ftype == TType.STOP:
-      break
-    else:
-      stype, sname, type_args, default = self.cached[fid]
-      if stype == ftype:
-        if stype:
-          class_, spec = type_args
-          self.vars[sname] = class_()
-          self.vars[sname].read()
-        else:
-          self.vars[sname] = reader_helper(iprot, stype)
+    iprot.readStructBegin()
+    while True:
+      fname, ftype, fid = iprot.readFieldBegin()
+      if ftype == TType.STOP:
+        break
       else:
-        iprot.skip(ftype)
+        stype, sname, type_args, default = self.cached[fid]
+        if stype == ftype:
+          if stype:
+            class_, spec = type_args
+            self.vars[sname] = class_()
+            self.vars[sname].read()
+          else:
+            self.vars[sname] = reader_helper(iprot, stype)
+        else:
+          iprot.skip(ftype)
     iprot.readFieldEnd()
-  iprot.readStructEnd()
+    iprot.readStructEnd()
 
   def __write(self, oprot):
     if fastbinary and isinstance(oprot, TBinaryProtocol.TBinaryProtocolAccelerated):
