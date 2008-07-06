@@ -6,6 +6,27 @@ try:
 except:
   fastbinary = None
 
+def write_helper(oprot, ftype, value):
+  # copy-paste from TProtocol.skip
+  if ftype == TType.STOP:
+    raise "XXX"
+  elif ftype == TType.BOOL:
+    oprot.writeBool(value)
+  elif ftype == TType.BYTE:
+    oprot.writeByte(value)
+  elif ftype == TType.I16:
+    oprot.writeI16(value)
+  elif ftype == TType.I32:
+    oprot.writeI32(value)
+  elif ftype == TType.I64:
+    oprot.writeI64(value)
+  elif ftype == TType.DOUBLE:
+    oprot.writeDouble(value)
+  elif ftype == TType.STRING:
+    oprot.writeString(value)
+  else:
+    raise "XXX: hey, it's %d type" % ftype
+
 def reader_helper(iprot, ftype):
   # copy-paste from TProtocol.skip
   if ftype == TType.STOP:
@@ -88,7 +109,7 @@ class ThriftStruct(object):
       else:
         stype, sname, type_args, default = self.cached[fid]
         if stype == ftype:
-          if type_args:
+          if ftype == TType.STRUCT:
             class_, spec = type_args
             result = class_()
             result.read()
@@ -100,14 +121,24 @@ class ThriftStruct(object):
     iprot.readFieldEnd()
     iprot.readStructEnd()
 
-  def __write(self, oprot):
+  def write(self, oprot):
     if fastbinary and isinstance(oprot, TBinaryProtocol.TBinaryProtocolAccelerated):
       spec = self.__class__, self.thrift_spec
       oprot.trans.write(fastbinary.encode_binary(self, spec))
       return
+
     oprot.writeStructBegin(self.__class__.__name__)
-    for name, value in self.vars.items():
-      # XXX
-      pass
+    for spec in self.thrift_spec:
+      if spec is None:
+        continue
+      fid, ftype, fname, type_args, default = spec
+      value = getattr(self, fname, default)
+      if value is not None: # it's bad idea to skip [] as None
+        oprot.writeFieldBegin(fname, ftype, fid)
+        if ftype in (TType.STRUCT, TType.SET, TType.MAP, TType.LIST):
+          raise "XXX"
+        else:
+          write_helper(oprot, ftype, value)
+        oprot.writeFieldEnd()
     oprot.writeFieldStop()
     oprot.writeStructEnd()
