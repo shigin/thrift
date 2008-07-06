@@ -60,24 +60,26 @@ class ThriftStruct(object):
    (num, type, typeargs, default)
   """
   def __init__(self, vars=None):
+    print "init it..."
     assert self.thrift_spec
     # it may be bad
-    assert isinstance(d, dict)
-    self.vars = vars
-    # TODO: guard this with mutex
+    assert isinstance(vars, (dict, type(None)))
+    self.vars = vars or {}
+    # TODO: guard it with mutex
     class_ = type(self)
     if hasattr(class_, 'cached'):
       return
     class_.cached = {}
+    print self.cached
     for x in self.thrift_spec:
       if x:
         class_.cached[x[0]] = x[1:]
 
-  def write(self, iprot):
-    if fastbinary and isinstance(oprot, TBinaryProtocol.TBinaryProtocolAccelerated):
-      spec = self.__class__, self.thrift_spec
-      oprot.trans.write(fastbinary.encode_binary(self, spec))
+  def read(self, iprot):
+    if fastbinary and isinstance(iprot, TBinaryProtocol.TBinaryProtocolAccelerated):
+      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
       return
+    print "normal operation"
 
     iprot.readStructBegin()
     while True:
