@@ -117,7 +117,8 @@ class ThriftStruct(object):
    (num, type, type_args, default)
   """
   def __init__(self, vars=None):
-    assert self.thrift_spec
+    if not self.thrift_spec:
+        self.thrift_spec = tuple()
     # it may be bad
     if vars:
       assert isinstance(vars, dict)
