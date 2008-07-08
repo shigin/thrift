@@ -576,6 +576,21 @@ void t_py_generator::generate_py_struct_definition(ofstream& out,
     indent(out) << ")" << endl << endl;
   } else {
     indent(out) << "thrift_spec = None" << endl;
+    indent(out) << "cached = {" << endl;
+    indent_up();
+
+    for (m_iter = sorted_members.begin(); m_iter != sorted_members.end(); ++m_iter) {
+      indent(out) << (*m_iter)->get_key() << ": ("
+            << type_to_enum((*m_iter)->get_type()) << ", "
+            << "'" << (*m_iter)->get_name() << "'" << ", "
+            << type_to_spec_args((*m_iter)->get_type()) << ", "
+            << "None" << ", "
+            << "),"
+            << endl;
+    }
+
+    indent_down();
+    indent(out) << "}" << endl << endl;
   }
 
   generate_py_struct_reader(out, tstruct);
