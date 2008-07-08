@@ -117,8 +117,6 @@ class ThriftStruct(object):
    (num, type, type_args, default)
   """
   def __init__(self, vars=None):
-    if not self.thrift_spec:
-      self.thrift_spec = tuple()
     if vars: # it can be None
       for name, value in vars.items():
         setattr(self, name, value)
