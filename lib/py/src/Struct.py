@@ -118,10 +118,8 @@ class ThriftStruct(object):
   """
   def __init__(self, vars=None):
     if not self.thrift_spec:
-        self.thrift_spec = tuple()
-    # it may be bad
-    if vars:
-      assert isinstance(vars, dict)
+      self.thrift_spec = tuple()
+    if vars: # it can be None
       for name, value in vars.items():
         setattr(self, name, value)
     # TODO: guard it with mutex
@@ -134,17 +132,20 @@ class ThriftStruct(object):
         class_.cached[x[0]] = x[1:]
 
   def read(self, iprot):
-    if fastbinary and isinstance(iprot, TBinaryProtocol.TBinaryProtocolAccelerated):
-      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
-      return
+    if fastbinary and self.thrift_spec is not None:
+      if isinstance(iprot, TBinaryProtocol.TBinaryProtocolAccelerated):
+        fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
+        return
 
     iprot.readStructBegin()
     while True:
       fname, ftype, fid = iprot.readFieldBegin()
+      print "read %s field" % fname
       if ftype == TType.STOP:
         break
       else:
         stype, sname, type_args, default = self.cached[fid]
+        print "read %s param" % sname
         if stype == ftype:
           setattr(self, sname, reader_helper(iprot, stype, type_args))
         else:
@@ -153,16 +154,16 @@ class ThriftStruct(object):
     iprot.readStructEnd()
 
   def write(self, oprot):
-    if fastbinary and isinstance(oprot, TBinaryProtocol.TBinaryProtocolAccelerated):
-      spec = self.__class__, self.thrift_spec
-      oprot.trans.write(fastbinary.encode_binary(self, spec))
-      return
+    if fastbinary and self.thrift_spec is not None:
+      if isinstance(oprot, TBinaryProtocol.TBinaryProtocolAccelerated):
+        spec = self.__class__, self.thrift_spec
+        oprot.trans.write(fastbinary.encode_binary(self, spec))
+        return
 
     oprot.writeStructBegin(self.__class__.__name__)
-    for spec in self.thrift_spec:
-      if spec is None:
-        continue
-      fid, ftype, fname, type_args, default = spec
+    for fid, spec in self.cached.items():
+      ftype, fname, type_args, default = spec
+      print "write %s field" % fname
       value = getattr(self, fname, default)
       if value is not None: # it's bad idea to skip [] as None
         oprot.writeFieldBegin(fname, ftype, fid)
