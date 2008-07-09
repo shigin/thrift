@@ -114,20 +114,21 @@ class ThriftStruct(object):
   
   Child MUST specify thrift_spec!
   
-   (num, type, type_args, default)
+   (num, type, name, type_args, default)
   """
-  def __init__(self, vars=None):
-    if vars: # it can be None
-      for name, value in vars.items():
-        setattr(self, name, value)
+  def __init__(self, d=None):
     # TODO: guard it with mutex
     class_ = type(self)
-    if hasattr(class_, 'cached'):
-      return
-    class_.cached = {}
-    for x in self.thrift_spec:
-      if x:
-        class_.cached[x[0]] = x[1:]
+    if not hasattr(class_, 'cached'):
+      class_.cached = {}
+      for specs in self.thrift_spec:
+        if specs:
+          class_.cached[specs[0]] = specs[1:]
+    for  _, name, _, default in self.cached.values():
+        setattr(self, name, default)
+    if d: # it can be None
+      for name, value in d.items():
+        setattr(self, name, value)
 
   def read(self, iprot):
     if fastbinary and self.thrift_spec is not None:
@@ -138,12 +139,14 @@ class ThriftStruct(object):
     iprot.readStructBegin()
     while True:
       fname, ftype, fid = iprot.readFieldBegin()
-      print "read %s field" % fname
       if ftype == TType.STOP:
         break
       else:
-        stype, sname, type_args, default = self.cached[fid]
-        print "read %s param" % sname
+        if fid in self.cached:
+          stype, sname, type_args, default = self.cached[fid]
+        else:
+          iprot.skip(ftype)
+          continue
         if stype == ftype:
           setattr(self, sname, reader_helper(iprot, stype, type_args))
         else:
@@ -161,9 +164,8 @@ class ThriftStruct(object):
     oprot.writeStructBegin(self.__class__.__name__)
     for fid, spec in self.cached.items():
       ftype, fname, type_args, default = spec
-      print "write %s field" % fname
-      value = getattr(self, fname, default)
-      if value is not None: # it's bad idea to skip [] as None
+      if hasattr(self, fname):
+        value = getattr(self, fname)
         oprot.writeFieldBegin(fname, ftype, fid)
         write_helper(oprot, ftype, type_args, value)
         oprot.writeFieldEnd()
