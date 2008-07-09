@@ -515,7 +515,7 @@ void t_py_generator::generate_py_struct_definition(ofstream& out,
   out <<
     "class " << tstruct->get_name();
   if (is_exception) {
-    out << "(Exception)";
+    out << "(Exception, ThriftStruct)";
   } else {
     out << "(ThriftStruct)";
   }
@@ -593,6 +593,14 @@ void t_py_generator::generate_py_struct_definition(ofstream& out,
     indent(out) << "}" << endl << endl;
   }
 
+  if (is_exception) {
+    /* here we must generate __init__ if multi inheritance used */
+    indent(out) << "def __init__(self, d=None):" << endl;
+    indent_up();
+    indent(out) << "ThriftStruct.__init__(self, d)" << endl << endl;
+    indent_down();
+  }  
+  
   generate_py_struct_reader(out, tstruct);
   generate_py_struct_writer(out, tstruct);
 
