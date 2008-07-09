@@ -115,6 +115,9 @@ class ThriftStruct(object):
   Child MUST specify thrift_spec!
   
    (num, type, name, type_args, default)
+  or cached:
+   num: (type, name, type_args, default)
+   
   """
   def __init__(self, d=None):
     # TODO: guard it with mutex
