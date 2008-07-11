@@ -676,6 +676,58 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
       }
     }
     scope_down(out);
+
+    if (!members.empty()) {
+      // Full initialization constructor, only if non-empty.
+      string init_prefix = "in";
+      bool ok_prefix = false;
+      while(!ok_prefix) {
+	init_prefix.append("_");
+
+	ok_prefix = true;
+	for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
+	  if ((*m_iter)->get_name().substr(0,init_prefix.size()) ==
+	      init_prefix) {
+	    ok_prefix = false;
+	    break;
+	  }
+	}
+      }
+	
+      indent(out) << "explicit " << tstruct->get_name() << "(" << "\n";
+      indent_up();
+      indent_up();
+      for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
+	if (m_iter != members.begin()) {
+	  out << ",\n";
+	}
+	indent(out) << "const " << type_name((*m_iter)->get_type()) 
+		    << "& " << init_prefix << (*m_iter)->get_name();
+      }
+      out << ")\n";
+      indent_down();
+      indent(out) << ": \n";
+      indent_up();
+      for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
+	if (m_iter != members.begin()) {
+	  out << ",\n";
+	}
+	indent(out) << (*m_iter)->get_name() << "(" << init_prefix
+		    << (*m_iter)->get_name() << ")";
+      }
+      out << "\n";
+      indent_down();
+      indent(out) << "{\n";
+      indent_up();
+      for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
+	if ((*m_iter)->get_req() != t_field::T_REQUIRED) {
+	  indent(out) << "__isset." << (*m_iter)->get_name() << " = true;\n";
+	}
+      }
+      indent_down();
+      indent(out) << "} \n";
+      indent_down();
+    }
   }
 
   out <<
