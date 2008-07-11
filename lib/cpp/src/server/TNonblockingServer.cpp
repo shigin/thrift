@@ -292,7 +292,7 @@ void TConnection::transition() {
 
     // If the function call generated return data, then move into the send
     // state and get going
-    // 4 bytes were reserved for frame size 
+    // 4 bytes were reserved for frame size
     if (writeBufferSize_ > 4) {
 
       // Move into write state
