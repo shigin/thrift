@@ -32,7 +32,7 @@ const int64_t Util::currentTime() {
   assert(ret == 0);
   toMilliseconds(result, now);
 #else
-#error no one time mechanism aviable
+#error "No high-precision clock is available."
 #endif // defined(HAVE_CLOCK_GETTIME)
 
   return result;
