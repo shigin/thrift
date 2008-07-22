@@ -136,7 +136,9 @@ class ThriftStruct(object):
   def read(self, iprot):
     if fastbinary and self.thrift_spec is not None:
       if isinstance(iprot, TBinaryProtocol.TBinaryProtocolAccelerated):
-        fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
+        fastbinary.decode_binary(self, iprot.trans, 
+                                 (self.__class__, self.thrift_spec),
+                                 self.thrift_offset)
         return
 
     iprot.readStructBegin()

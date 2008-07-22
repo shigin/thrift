@@ -576,6 +576,7 @@ void t_py_generator::generate_py_struct_definition(ofstream& out,
     indent_down();
     indent(out) << ")" << endl << endl;
   } else {
+    indent(out) << "thrift_offset = 0" << endl;
     indent(out) << "thrift_spec = ()" << endl;
   }
 
