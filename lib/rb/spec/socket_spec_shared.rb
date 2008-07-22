@@ -26,19 +26,13 @@ shared_examples_for "a socket" do
 
   it "should raise an error when it cannot read from the handle" do
     @socket.open
-    @handle.should_receive(:read).with(17).and_raise(StandardError)
+    @handle.should_receive(:readpartial).with(17).and_raise(StandardError)
     lambda { @socket.read(17) }.should raise_error(Thrift::TransportException) { |e| e.type.should == Thrift::TransportException::NOT_OPEN }
-  end
-
-  it "should raise an error when it reads no data from the handle" do
-    @socket.open
-    @handle.should_receive(:read).with(17).and_return("")
-    lambda { @socket.read(17) }.should raise_error(Thrift::TransportException, "Socket: Could not read 17 bytes from #{@socket.instance_variable_get("@desc")}")
   end
 
   it "should return the data read when reading from the handle works" do
     @socket.open
-    @handle.should_receive(:read).with(17).and_return("test data")
+    @handle.should_receive(:readpartial).with(17).and_return("test data")
     @socket.read(17).should == "test data"
   end
 
@@ -56,5 +50,36 @@ shared_examples_for "a socket" do
     @socket.should_not be_open
     lambda { @socket.write("fail") }.should raise_error(IOError, "closed stream")
     lambda { @socket.read(10) }.should raise_error(IOError, "closed stream")
+  end
+
+  it "should support the timeout accessor for read" do
+    @socket.timeout = 3
+    @socket.open
+    IO.should_receive(:select).with([@handle], nil, nil, 3).and_return([[@handle], [], []])
+    @handle.should_receive(:readpartial).with(17).and_return("test data")
+    @socket.read(17).should == "test data"
+  end
+
+  it "should support the timeout accessor for write" do
+    @socket.timeout = 3
+    @socket.open
+    IO.should_receive(:select).with(nil, [@handle], nil, 3).twice.and_return([[], [@handle], []])
+    @handle.should_receive(:write_nonblock).with("test data").and_return(4)
+    @handle.should_receive(:write_nonblock).with(" data").and_return(5)
+    @socket.write("test data").should == 9
+  end
+
+  it "should raise an error when read times out" do
+    @socket.timeout = 0.5
+    @socket.open
+    IO.should_receive(:select).with([@handle], nil, nil, 0.5).at_least(1).times.and_return(nil)
+    lambda { @socket.read(17) }.should raise_error(Thrift::TransportException) { |e| e.type.should == Thrift::TransportException::TIMED_OUT }
+  end
+
+  it "should raise an error when write times out" do
+    @socket.timeout = 0.5
+    @socket.open
+    IO.should_receive(:select).with(nil, [@handle], nil, 0.5).any_number_of_times.and_return(nil)
+    lambda { @socket.write("test data") }.should raise_error(Thrift::TransportException) { |e| e.type.should == Thrift::TransportException::TIMED_OUT }
   end
 end

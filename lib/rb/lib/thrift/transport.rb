@@ -76,9 +76,12 @@ module Thrift
   deprecate_class! :TTransportFactory => TransportFactory
 
   class BufferedTransport < Transport
+    DEFAULT_BUFFER = 4096
+    
     def initialize(transport)
       @transport = transport
       @wbuf = ''
+      @rbuf = ''
     end
 
     def open?
@@ -95,7 +98,13 @@ module Thrift
     end
 
     def read(sz)
-      return @transport.read(sz)
+      ret = @rbuf.slice!(0...sz) 
+      if ret.length == 0
+        @rbuf = @transport.read([sz, DEFAULT_BUFFER].max) 
+        @rbuf.slice!(0...sz) 
+      else 
+        ret 
+      end
     end
 
     def write(buf)
@@ -109,6 +118,25 @@ module Thrift
       end
       
       @transport.flush
+    end
+
+    def borrow(requested_length = 0)
+      # $stderr.puts "#{Time.now.to_f} Have #{@rbuf.length} asking for #{requested_length.inspect}"
+      return @rbuf if @rbuf.length > requested_length
+      
+      if @rbuf.length < DEFAULT_BUFFER
+        @rbuf << @transport.read([requested_length, DEFAULT_BUFFER].max)
+      end
+      
+      if @rbuf.length < requested_length
+        @rbuf << @transport.read_all(requested_length - @rbuf.length)
+      end
+    
+      @rbuf
+    end
+    
+    def consume!(size)
+      @rbuf.slice!(0...size)
     end
   end
   deprecate_class! :TBufferedTransport => BufferedTransport
@@ -189,12 +217,16 @@ module Thrift
   deprecate_class! :TFramedTransportFactory => FramedTransportFactory
 
   class MemoryBuffer < Transport
+    GARBAGE_BUFFER_SIZE = 4*(2**10) # 4kB
+
     # If you pass a string to this, you should #dup that string
     # unless you want it to be modified by #read and #write
     #--
-    # yes this behavior is intentional
+    # this behavior is no longer required. If you wish to change it
+    # go ahead, just make sure the specs pass
     def initialize(buffer = nil)
       @buf = buffer || ''
+      @index = 0
     end
 
     def open?
@@ -208,20 +240,28 @@ module Thrift
     end
 
     def peek
-      not @buf.empty?
+      @index < @buf.size
     end
 
     # this method does not use the passed object directly but copies it
     def reset_buffer(new_buf = '')
       @buf.replace new_buf
+      @index = 0
     end
 
     def available
-      @buf.length
+      @buf.length - @index
     end
 
     def read(len)
-      @buf.slice!(0, len)
+      data = @buf.slice(@index, len)
+      @index += len
+      @index = @buf.size if @index > @buf.size
+      if @index >= GARBAGE_BUFFER_SIZE
+        @buf = @buf.slice(@index..-1)
+        @index = 0
+      end
+      data
     end
 
     def write(wbuf)
@@ -230,6 +270,21 @@ module Thrift
 
     def flush
     end
+
+    # For fast binary protocol access
+    def borrow(size = nil)
+      if size.nil?
+        @buf[@index..-1]
+      else
+        if size > available
+          raise EOFError # Memory buffers only get one shot.
+        else
+          @buf[@index, size]
+        end
+      end
+    end
+
+    alias_method :consume!, :read
   end
   deprecate_class! :TMemoryBuffer => MemoryBuffer
 
@@ -243,9 +298,11 @@ module Thrift
       @output = output
     end
 
-    def open?; true end
+    def open?; not @input.closed? or not @output.closed? end
     def read(sz); @input.read(sz) end
     def write(buf); @output.write(buf) end
+    def close; @input.close; @output.close end
+    def to_io; @input end # we're assuming this is used in a IO.select for reading
   end
   deprecate_class! :TIOStreamTransport => IOStreamTransport
 end

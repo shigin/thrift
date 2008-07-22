@@ -48,18 +48,26 @@ class ThriftTransportSpec < Spec::ExampleGroup
   end
 
   describe BufferedTransport do
-    it "should pass through everything but write/flush" do
+    it "should pass through everything but write/flush/read" do
       trans = mock("Transport")
       trans.should_receive(:open?).ordered.and_return("+ open?")
       trans.should_receive(:open).ordered.and_return("+ open")
       trans.should_receive(:flush).ordered # from the close
       trans.should_receive(:close).ordered.and_return("+ close")
-      trans.should_receive(:read).with(217).ordered.and_return("+ read")
       btrans = BufferedTransport.new(trans)
       btrans.open?.should == "+ open?"
       btrans.open.should == "+ open"
       btrans.close.should == "+ close"
-      btrans.read(217).should == "+ read"
+    end
+    
+    it "should buffer reads in chunks of #{BufferedTransport::DEFAULT_BUFFER}" do
+      trans = mock("Transport")
+      trans.should_receive(:read).with(BufferedTransport::DEFAULT_BUFFER).and_return("lorum ipsum dolor emet")
+      btrans = BufferedTransport.new(trans)
+      btrans.read(6).should == "lorum "
+      btrans.read(6).should == "ipsum "
+      btrans.read(6).should == "dolor "
+      btrans.read(6).should == "emet"
     end
 
     it "should buffer writes and send them on flush" do
@@ -232,7 +240,8 @@ class ThriftTransportSpec < Spec::ExampleGroup
       s = "this is a test"
       @buffer = MemoryBuffer.new(s)
       @buffer.read(4).should == "this"
-      s.should == " is a test"
+      s.slice!(-4..-1)
+      @buffer.read(@buffer.available).should == " is a "
     end
 
     it "should always remain open" do
@@ -284,15 +293,20 @@ class ThriftTransportSpec < Spec::ExampleGroup
 
   describe IOStreamTransport do
     before(:each) do
-      @input = mock("Input")
-      @output = mock("Output")
+      @input = mock("Input", :closed? => false)
+      @output = mock("Output", :closed? => false)
       @trans = IOStreamTransport.new(@input, @output)
     end
 
-    it "should always be open" do
+    it "should be open as long as both input or output are open" do
       @trans.should be_open
-      @trans.close
+      @input.stub!(:closed?).and_return(true)
       @trans.should be_open
+      @input.stub!(:closed?).and_return(false)
+      @output.stub!(:closed?).and_return(true)
+      @trans.should be_open
+      @input.stub!(:closed?).and_return(true)
+      @trans.should_not be_open
     end
 
     it "should pass through read/write to input/output" do
@@ -300,6 +314,12 @@ class ThriftTransportSpec < Spec::ExampleGroup
       @output.should_receive(:write).with("foobar").and_return("+ write")
       @trans.read(17).should == "+ read"
       @trans.write("foobar").should == "+ write"
+    end
+
+    it "should close both input and output when closed" do
+      @input.should_receive(:close)
+      @output.should_receive(:close)
+      @trans.close
     end
   end
 end
