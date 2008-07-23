@@ -175,7 +175,7 @@ class ThriftStruct(object):
       if not spec:
         continue
       fid, ftype, fname, type_args, default = spec
-      if hasattr(self, fname):
+      if getattr(self, fname, None) is not None:
         value = getattr(self, fname)
         oprot.writeFieldBegin(fname, ftype, fid)
         write_helper(oprot, ftype, type_args, value)
