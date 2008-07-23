@@ -1,3 +1,4 @@
+import warnings
 from thrift.Thrift import *
 from thrift.transport import TTransport
 from thrift.protocol import TBinaryProtocol
@@ -119,19 +120,20 @@ class ThriftStruct(object):
    num: (type, name, type_args, default)
    
   """
-  def __init__(self, d=None):
-    # TODO: guard it with mutex
-    class_ = type(self)
-    if not hasattr(class_, 'cached'):
-      class_.cached = {}
-      for specs in self.thrift_spec:
-        if specs:
-          class_.cached[specs[0]] = specs[1:]
-    for  _, name, _, default in self.cached.values():
+  def __init__(self, __d=None, **d):
+    if __d is not None:
+      warnings.warn("old--style initialization used", DeprecationWarning)
+      d = __d
+    else:
+      if 'd' in d and 'd' not in (k[3] for k in self.thrift_spec if k):
+        warnings.warn("old--style initialization used", DeprecationWarning)
+        d = d['d']
+    for spec in self.thrift_spec:
+      if spec:
+        _, _, name, _, default = spec
         setattr(self, name, default)
-    if d: # it can be None
-      for name, value in d.items():
-        setattr(self, name, value)
+    for name, value in d.items():
+      setattr(self, name, value)
 
   def read(self, iprot):
     if fastbinary and self.thrift_spec is not None:
@@ -147,8 +149,10 @@ class ThriftStruct(object):
       if ftype == TType.STOP:
         break
       else:
-        if fid in self.cached:
-          stype, sname, type_args, default = self.cached[fid]
+        offset = getattr(self, 'thrift_offset', 0)
+        if fid >= offset and fid < (len(self.thrift_spec) + offset) and self.thrift_spec[fid - offset]:
+          sid, stype, sname, type_args, default = self.thrift_spec[fid - offset]
+          assert sid == fid, "%d != %d (offset %d) [%d]" % (sid, fid, offset, fid-offset)
         else:
           iprot.skip(ftype)
           continue
@@ -167,8 +171,10 @@ class ThriftStruct(object):
         return
 
     oprot.writeStructBegin(self.__class__.__name__)
-    for fid, spec in self.cached.items():
-      ftype, fname, type_args, default = spec
+    for spec in self.thrift_spec:
+      if not spec:
+        continue
+      fid, ftype, fname, type_args, default = spec
       if hasattr(self, fname):
         value = getattr(self, fname)
         oprot.writeFieldBegin(fname, ftype, fid)
